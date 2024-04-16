@@ -1,0 +1,139 @@
+//global declaration infrastructure
+hashfunction H;
+const PUF:Function;
+const XOR:Function;
+const Concat:Function;
+
+// protocol description
+protocol PMASFEP(UserDevice, Gateway, SensorNode)
+{
+    role UserDevice // role
+    {
+        //declaration
+        fresh NU1: Nonce;//send
+        secret DID, DLN, TIDU0, CU0, SNIEI, CU1, SK;
+        //events
+        macro tempNU1 = XOR(NU1, DID);
+        macro tempTIDU0 = XOR(TIDU0, DLN);
+        send_1(UserDevice, Gateway, Concat(tempNU1, tempTIDU0));
+        macro G1 = XOR(DID, CU0);
+        var NG1 : Nonce;//receive
+        macro G2 = XOR(DLN, NG1);
+        macro G3 = H(Concat(CU0, NG1, PUF(CU0)));
+        recv_2(Gateway, UserDevice, Concat(G1, G2, G3));
+        macro U2 = H(Concat(CU0, NG1, PUF(CU0), TIDU0));
+        fresh NU2 : Nonce;//send
+        macro U3 = XOR(NU2, DLN);
+        macro tempSNIEI = XOR( H(Concat(DID, DLN, PUF(CU0), NG1, SNIEI)), SNIEI);
+        send_3(UserDevice, Gateway, Concat(U2, U3, tempSNIEI));
+        var NG3 : Nonce;
+        macro G9 = XOR(NG3, DID);
+        macro tempCU1 = XOR(H(CU0, PUF(CU0)), CU1);
+        macro SN4 = {SK}pk(Gateway);
+        macro SN5 = {H(CONCAT(SK, TIDU0))}sk(SensorNode);
+        recv_6(Gateway, UserDevice, Concat(G9, tempCU1, SN4, SN5));
+        //claims
+        claim(UserDevice, Secret, tempNU1);
+        claim(UserDevice, Secret, tempTIDU0);
+        claim(UserDevice, Secret, G1);
+        claim(UserDevice, Secret, G2);
+        claim(UserDevice, Secret, G3);
+        claim(UserDevice, Secret, U2);
+        claim(UserDevice, Secret, U3);
+        claim(UserDevice, Secret, tempSNIEI);
+        claim(UserDevice, Secret, G9);
+        claim(UserDevice, Secret, tempCU1);
+        claim(UserDevice, Secret, SN4);
+        claim(UserDevice, Secret, SN5);
+        claim(UserDevice, Alive);
+        claim(UserDevice, Weakagree);
+        claim(UserDevice, Niagree);
+        claim(UserDevice, Nisynch);
+    }
+    role Gateway // role
+    {
+        //declaration
+        var NU1: Nonce;//receive
+        secret DID, DLN, TIDU0, CU0, SNIEI, CSN0, TIDSN0, CSN1, SK, CU1;
+        //events
+        macro tempNU1 = XOR(NU1, DID);
+        macro tempTIDU0 = XOR(TIDU0, DLN);
+        recv_1(UserDevice, Gateway, Concat(tempNU1, tempTIDU0));
+        macro G1 = XOR(DID, CU0);
+        fresh NG1 : Nonce;//send
+        macro G2 = XOR(DLN, NG1);
+        macro G3 = H(Concat(CU0, NG1, PUF(CU0)));
+        send_2(Gateway, UserDevice, Concat(G1, G2, G3));
+        macro U2 = H(Concat(CU0, NG1, PUF(CU0), TIDU0));
+        var NU2 : Nonce;//send
+        macro U3 = XOR(NU2, DLN);
+        macro tempSNIEI = XOR( H(Concat(DID, DLN, PUF(CU0), NG1, SNIEI)), SNIEI);
+        recv_3(UserDevice, Gateway, Concat(U2, U3, tempSNIEI));
+        macro G5 = XOR(SNIEI, CSN0);
+        fresh NG2 : Nonce;// send
+        macro G6 = XOR(TIDSN0, NG2);
+        macro G7 = H(Concat(CSN0, NG2, PUF(CSN0)));
+        macro tempCSN1 = XOR(H(Concat(CSN0, PUF(CSN0))), CSN1);
+        send_4(Gateway, SensorNode, Concat(G5, G6, G7, tempCSN1));
+        var NSN1 : Nonce; //receive
+        macro SN2 = XOR(NSN1, TIDSN0);
+        macro SN4 = {SK}pk(Gateway);
+        macro SN5 = {H(CONCAT(SK, TIDU0))}sk(SensorNode);
+        recv_5(SensorNode, Gateway, Concat(SN2, SN4, SN5));
+        fresh NG3 : Nonce;
+        macro G9 = XOR(NG3, DID);
+        macro tempCU1 = XOR(H(CU0, PUF(CU0)), CU1);
+        send_6(Gateway, UserDevice, Concat(G9, tempCU1, SN4, SN5));
+        //claims
+        claim(Gateway, Secret, tempNU1);
+        claim(Gateway, Secret, tempTIDU0);
+        claim(Gateway, Secret, G1);
+        claim(Gateway, Secret, G2);
+        claim(Gateway, Secret, G3);
+        claim(Gateway, Secret, U2);
+        claim(Gateway, Secret, U3);
+        claim(Gateway, Secret, tempSNIEI);
+        claim(Gateway, Secret, G5);
+        claim(Gateway, Secret, G6);
+        claim(Gateway, Secret, G7);
+        claim(Gateway, Secret, tempCSN1);
+        claim(Gateway, Secret, SN2);
+        claim(Gateway, Secret, SN4);
+        claim(Gateway, Secret, SN5);
+        claim(Gateway, Secret, G9);
+        claim(Gateway, Secret, tempCU1);
+        claim(Gateway, Alive);
+        claim(Gateway, Weakagree);
+        claim(Gateway, Niagree);
+        claim(Gateway, Nisynch);
+    }
+    role SensorNode //role
+    {
+        //declaration
+        secret CSN0, SNIEI, TIDSN0, TIDU0, CSN1, SK;
+        //events
+        macro G5 = XOR(SNIEI, CSN0);
+        fresh NG2 : Nonce;// send
+        macro G6 = XOR(TIDSN0, NG2);
+        macro G7 = H(Concat(CSN0, NG2, PUF(CSN0)));
+        macro tempCSN1 = XOR(H(Concat(CSN0, PUF(CSN0))), CSN1);
+        recv_4(Gateway, SensorNode, Concat(G5, G6, G7, tempCSN1));
+        fresh NSN1 : Nonce;
+        macro SN2 = XOR(NSN1, TIDSN0);
+        macro SN4 = {SK}pk(Gateway);
+        macro SN5 = {H(CONCAT(SK, TIDU0))}sk(SensorNode);
+        send_5(SensorNode, Gateway, Concat(SN2, SN4, SN5));
+        //claims
+        claim(SensorNode, Secret, G5);
+        claim(SensorNode, Secret, G6);
+        claim(SensorNode, Secret, G7);
+        claim(SensorNode, Secret, tempCSN1);
+        claim(SensorNode, Secret, SN2);
+        claim(SensorNode, Secret, SN4);
+        claim(SensorNode, Secret, SN5);
+        claim(SensorNode, Alive);
+        claim(SensorNode, Weakagree);
+        claim(SensorNode, Niagree);
+        claim(SensorNode, Nisynch);
+    }
+}
